@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 976 480">
+  <defs>
+    <linearGradient id="chatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563EB;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1D4ED8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Ícono de chat con engranaje -->
+  <g transform="translate(178, 280)">
+    <!-- Burbuja de chat -->
+    <path d="M 15 50 
+             C 15 22.5 37.5 0 65 0
+             L 155 0
+             C 182.5 0 205 22.5 205 50
+             L 205 120
+             C 205 147.5 182.5 170 155 170
+             L 45 170
+             L 15 200
+             Z" 
+          fill="url(#chatGrad)" 
+          rx="25"/>
+    
+    <!-- Engranaje central -->
+    <g transform="translate(110, 85)">
+      <!-- Círculo exterior del engranaje -->
+      <circle r="35" fill="none" stroke="#FFFFFF" stroke-width="6"/>
+      
+      <!-- Dientes del engranaje -->
+      <g stroke="#FFFFFF" stroke-width="4" stroke-linecap="round">
+        <!-- Dientes principales (4 direcciones) -->
+        <line x1="0" y1="-45" x2="0" y2="-35"/>
+        <line x1="0" y1="45" x2="0" y2="35"/>
+        <line x1="45" y1="0" x2="35" y2="0"/>
+        <line x1="-45" y1="0" x2="-35" y2="0"/>
+        
+        <!-- Dientes diagonales -->
+        <line x1="31.8" y1="-31.8" x2="24.7" y2="-24.7"/>
+        <line x1="-31.8" y1="31.8" x2="-24.7" y2="24.7"/>
+        <line x1="31.8" y1="31.8" x2="24.7" y2="24.7"/>
+        <line x1="-31.8" y1="-31.8" x2="-24.7" y2="-24.7"/>
+      </g>
+      
+      <!-- Círculo interior -->
+      <circle r="15" fill="#FFFFFF"/>
+      
+      <!-- Detalles internos del engranaje -->
+      <g stroke="#2563EB" stroke-width="2" fill="none">
+        <circle r="8"/>
+        <line x1="-6" y1="0" x2="6" y2="0"/>
+        <line x1="0" y1="-6" x2="0" y2="6"/>
+      </g>
+    </g>
+  </g>
+  
+  <!-- Texto "VepiAutoMKT" -->
+  <g transform="translate(408, 320)">
+    <!-- "Vepiuto" en negro -->
+    <text x="0" y="0" 
+          font-family="Arial, Helvetica, sans-serif" 
+          font-size="92" 
+          font-weight="700" 
+          fill="#333333">Vepiuto</text>
+    
+    <!-- "MKT" en azul -->
+    <text x="432" y="0" 
+          font-family="Arial, Helvetica, sans-serif" 
+          font-size="92" 
+          font-weight="700" 
+          fill="#2563EB">MKT</text>
+  </g>
+  
+  <!-- Subtítulo "Automatiza tu marketing" -->
+  <text x="408" y="380" 
+        font-family="Arial, Helvetica, sans-serif" 
+        font-size="32" 
+        font-weight="400" 
+        fill="#666666">Automatiza tu marketing</text>
+</svg>

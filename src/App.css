@@ -1,0 +1,13 @@
+import React from 'react';
+import ProjectManager from './ProjectManager';
+import './index.css';
+
+function App() {
+  return (
+    <div className="App">
+      <ProjectManager />
+    </div>
+  );
+}
+
+export default App;
