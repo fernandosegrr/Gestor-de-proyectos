@@ -1,23 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, DollarSign, Eye, Clock, CheckCircle, Edit, Trash2, AlertCircle, X, Wifi, WifiOff, Download, Upload, Settings, Save, FileText, Filter, SortAsc, SortDesc, FileSpreadsheet } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Plus, Calendar, DollarSign, Eye, Clock, CheckCircle, Edit, Trash2, AlertCircle, X, Wifi, WifiOff, Download, Upload, Settings, Save, FileText, Filter, SortAsc, SortDesc, FileSpreadsheet, BadgeCheck } from 'lucide-react';
+
+// Importar funciones centralizadas del sistema dataSync
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
 // Importar funciones centralizadas del sistema dataSync
+
 import { 
   dataManager, 
-  firebaseManager, 
   useDataSync, 
   useConnectionState,
   DATA_EVENTS, 
-  initializeData,
-  INITIAL_DATA,
-  notificationService
+  initializeData
 } from '../utils/dataSync';
 
 function ProjectManager() {
   // State variables
   const [projects, setProjects] = useState([]);
+
+  // Acción para marcar como pagado
+  const handleMarkAsPaid = async (project) => {
+    // Calcular la próxima fecha de corte
+    const nextCutoff = dataManager.calculateNextCutoffDate(project.cutoffDate || project.startDate);
+    // Limpiar factura si existe
+    const updatedProject = {
+      ...project,
+      cutoffDate: nextCutoff,
+      facturaGenerada: false,
+      folioFactura: '',
+      fechaFactura: ''
+    };
+    await dataManager.updateProject(updatedProject);
+    setProjects((prev) => prev.map(p => p.id === project.id ? updatedProject : p));
+    setAlertMessage('¡Pago registrado y fecha de corte actualizada!');
+    setShowAlertModal(true);
+  };
   const [showForm, setShowForm] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +117,7 @@ function ProjectManager() {
     if (updatedProjects) {
       setProjects(updatedProjects);
       // Verificar fechas de corte cuando se actualizan los proyectos
-      notificationService.checkCutoffDatesAndNotify(updatedProjects);
+  // notificationService.checkCutoffDatesAndNotify(updatedProjects); // Eliminado
     }
   });
 
@@ -113,7 +132,7 @@ function ProjectManager() {
     
     if (projects.length > 0) {
       // Inicializar el sistema de notificaciones cuando hay proyectos
-      cleanupNotifications = notificationService.initializeNotificationSystem(projects);
+  // cleanupNotifications = notificationService.initializeNotificationSystem(projects); // Eliminado
     }
     
     return () => {
@@ -186,6 +205,17 @@ function ProjectManager() {
 
     try {
       const dataToSave = { ...formData };
+
+      // Asegurar que los campos de factura se guarden correctamente
+      if (dataToSave.requiresBilling) {
+        dataToSave.facturaGenerada = !!formData.facturaGenerada;
+        dataToSave.folioFactura = formData.facturaGenerada ? (formData.folioFactura || '') : '';
+        dataToSave.fechaFactura = formData.facturaGenerada ? (formData.fechaFactura || '') : '';
+      } else {
+        dataToSave.facturaGenerada = false;
+        dataToSave.folioFactura = '';
+        dataToSave.fechaFactura = '';
+      }
 
       if (!dataToSave.hasInstallationCost) {
         dataToSave.installationCost = '';
@@ -363,11 +393,15 @@ function ProjectManager() {
       trialDays: project.trialDays || '7',
       installationCost: project.installationCost || '',
       hasInstallationCost: typeof project.installationCost !== 'undefined' && project.installationCost !== '' && parseFloat(project.installationCost) > 0,
-      installationDate: project.installationDate || '', // Nueva fecha específica para la instalación
+      installationDate: project.installationDate || '',
       requiresBilling: project.requiresBilling || false,
       rfc: project.rfc || '',
       businessName: project.businessName || '',
-      customCutoffDate: false // Inicialmente en false para permitir recálculo automático
+      customCutoffDate: false,
+      // Factura
+      facturaGenerada: !!project.facturaGenerada,
+      folioFactura: project.folioFactura || '',
+      fechaFactura: project.fechaFactura || ''
     });
     setEditingProject(project);
     setShowForm(true);
@@ -410,14 +444,7 @@ function ProjectManager() {
   const testWhatsAppNotification = async () => {
     try {
       // Importar dinámicamente el módulo de notificaciones
-      const { testNotification } = await import('../utils/notificationService');
-      const result = await testNotification();
-      
-      if (result.success) {
-        setAlertMessage('✅ Notificación de prueba enviada correctamente a WhatsApp');
-      } else {
-        setAlertMessage('❌ Error enviando notificación: ' + result.message);
-      }
+      setAlertMessage('Funcionalidad de notificación eliminada.');
       setShowAlertModal(true);
     } catch (error) {
       console.error('Error testing notification:', error);
@@ -782,95 +809,379 @@ function ProjectManager() {
     };
   };
 
+  const filteredProjects = getFilteredAndSortedProjects();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black p-4 font-sans text-gray-100">
-      <div className="max-w-6xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 border border-gray-700">
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-4 pb-4 border-b border-gray-600 w-full">
-            <div className="h-16 w-auto">
-              <img 
-                src="https://files.catbox.moe/14lubq.png" 
-                alt="VepiAutoMKT Logo" 
-                className="h-16 w-auto object-contain"
-              />
+    <div className="section-shell fade-in">
+      {/* Project Form Modal usando React Portal */}
+      {showForm && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-4xl shadow-2xl border border-gray-700" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+              <h2 className="text-2xl font-bold text-gray-100">
+                {editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto'}
+              </h2>
+              <button onClick={resetForm} className="text-gray-400 hover:text-gray-200 p-2">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="flex-1">
-              <p className="text-gray-400 text-lg">Gestor de Proyectos de Chatbots</p>
-              <div className="flex items-center gap-2 mt-1">
-                {getConnectionStatusIcon()}
-                <span className="text-sm text-gray-400">{getConnectionStatusText()}</span>
-                <span className="text-xs text-green-400">• DataSync Centralizado</span>
-                <span className="text-xs text-blue-400">• WhatsApp Notifications</span>
-                <span className="text-xs text-purple-400">• Facturación</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Nombre del Proyecto *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: Chatbot de Ventas" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Cliente
+                </label>
+                <input
+                  type="text"
+                  value={formData.clientName}
+                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nombre del cliente" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Estado
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Precio Mensual ($)
+                </label>
+                <input
+                  type="number"
+                  value={formData.monthlyPrice}
+                  onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="299" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Fecha de Inicio
+                </label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              {formData.status === 'semana_gratis' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Días de Prueba
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.trialDays}
+                    onChange={(e) => setFormData({ ...formData, trialDays: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="7" />
+                </div>
+              )}
+              {/* Sección de Fecha de Corte */}
+              {formData.status === 'establecido' && (
+                <div className="md:col-span-2 bg-orange-900/30 border border-orange-600 rounded-lg p-4">
+                  <div className="flex items-center mb-4">
+                    <Calendar className="w-5 h-5 text-orange-400 mr-2" />
+                    <label className="text-sm font-medium text-orange-300">
+                      Configuración de Fecha de Corte
+                    </label>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="cutoffDateType"
+                          checked={!formData.customCutoffDate}
+                          onChange={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              customCutoffDate: false,
+                              cutoffDate: prev.startDate ? dataManager.calculateNextCutoffDate(prev.startDate) : ''
+                            }));
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-orange-200">Fecha automática</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="cutoffDateType"
+                          checked={formData.customCutoffDate}
+                          onChange={() => setFormData(prev => ({ ...prev, customCutoffDate: true }))}
+                          className="mr-2"
+                        />
+                        <span className="text-orange-200">Fecha personalizada</span>
+                      </label>
+                    </div>
+                    {formData.startDate && !formData.customCutoffDate && (
+                      <div className="bg-gray-800 p-3 rounded-lg border border-gray-600">
+                        <div className="text-sm text-gray-300">
+                          <span className="font-medium">Fecha calculada automáticamente:</span>
+                          <span className="ml-2 text-green-400 font-mono">
+                            {formData.cutoffDate ? new Date(formData.cutoffDate + 'T00:00:00').toLocaleDateString('es-MX') : 'Selecciona fecha de inicio'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Se calculará automáticamente según la fecha de inicio
+                        </div>
+                      </div>
+                    )}
+                    {formData.customCutoffDate && (
+                      <div>
+                        <label className="block text-sm font-medium text-orange-300 mb-2">
+                          Fecha de Corte Personalizada
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.cutoffDate}
+                          onChange={(e) => setFormData({ ...formData, cutoffDate: e.target.value })}
+                          className="w-full px-4 py-2 border border-orange-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                        <div className="text-xs text-orange-200 mt-1">
+                          Puedes establecer una fecha de corte específica diferente al cálculo automático
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Sección de Costo de Instalación */}
+              <div className="md:col-span-2">
+                <div className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.hasInstallationCost}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      hasInstallationCost: e.target.checked,
+                      installationCost: e.target.checked ? formData.installationCost : '',
+                      installationDate: e.target.checked ? formData.installationDate : ''
+                    })}
+                    className="mr-2" />
+                  <label className="text-sm font-medium text-gray-300">
+                    ¿Incluye costo de instalación?
+                  </label>
+                </div>
+                {formData.hasInstallationCost && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-yellow-900/30 p-4 rounded-lg border border-yellow-600">
+                    <div>
+                      <label className="block text-sm font-medium text-yellow-300 mb-2">
+                        Costo de Instalación ($)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.installationCost}
+                        onChange={(e) => setFormData({ ...formData, installationCost: e.target.value })}
+                        className="w-full px-4 py-2 border border-yellow-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                        placeholder="1000" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-yellow-300 mb-2">
+                        Fecha de Instalación
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.installationDate}
+                        onChange={(e) => setFormData({ ...formData, installationDate: e.target.value })}
+                        className="w-full px-4 py-2 border border-yellow-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Sección de Facturación */}
+              <div className="md:col-span-2 border-t border-gray-600 pt-6">
+                <div className="flex items-center mb-4">
+                  <input
+                    type="checkbox"
+                    id="requiresBilling"
+                    checked={formData.requiresBilling}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      requiresBilling: e.target.checked,
+                      rfc: e.target.checked ? formData.rfc : '',
+                      businessName: e.target.checked ? formData.businessName : ''
+                    })}
+                    className="mr-2" />
+                  <label htmlFor="requiresBilling" className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Requiere facturación
+                  </label>
+                </div>
+                {formData.requiresBilling && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-900 p-4 rounded-lg border border-purple-600">
+                    <div>
+                      <label className="block text-sm font-medium text-purple-300 mb-2">
+                        RFC *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.rfc}
+                        onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })}
+                        className="w-full px-4 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="ABC123456789"
+                        maxLength="13" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-purple-300 mb-2">
+                        Razón Social *
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.businessName}
+                        onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                        className="w-full px-4 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Empresa S.A. de C.V." />
+                    </div>
+                  </div>
+                )}
+                {/* Flujo de factura generada */}
+                {formData.requiresBilling && (
+                  <div className="mt-4 bg-gray-900 p-4 rounded-lg border border-purple-700">
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        id="facturaGenerada"
+                        checked={formData.facturaGenerada}
+                        onChange={e => {
+                          const checked = e.target.checked;
+                          setFormData(f => ({
+                            ...f,
+                            facturaGenerada: checked,
+                            fechaFactura: checked ? (f.fechaFactura || new Date().toISOString().slice(0, 10)) : '',
+                            folioFactura: checked ? f.folioFactura : ''
+                          }));
+                        }}
+                        className="mr-2" />
+                      <label htmlFor="facturaGenerada" className="text-sm text-purple-200">¿Hay factura generada este mes?</label>
+                    </div>
+                    {formData.facturaGenerada && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-purple-300 mb-1">Folio de factura *</label>
+                          <input
+                            type="text"
+                            value={formData.folioFactura}
+                            onChange={e => setFormData(f => ({ ...f, folioFactura: e.target.value }))
+                            }
+                            className="w-full px-3 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Folio de la factura" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-purple-300 mb-1">Fecha de factura</label>
+                          <input
+                            type="date"
+                            value={formData.fechaFactura}
+                            onChange={e => setFormData(f => ({ ...f, fechaFactura: e.target.value }))
+                            }
+                            className="w-full px-3 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                        </div>
+                        <div className="col-span-2 flex justify-end mt-2">
+                          <button
+                            type="button"
+                            className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 text-xs"
+                            onClick={() => setFormData(f => ({ ...f, facturaGenerada: false, folioFactura: '', fechaFactura: '' }))
+                            }
+                          >
+                            Cancelar factura
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Descripción del proyecto..." />
               </div>
             </div>
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <Clock className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {editingProject ? 'Actualizar' : 'Crear'} Proyecto
+              </button>
+              <button
+                onClick={resetForm}
+                className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Estado del Sistema Simplificado */}
-        <div className="mb-4 p-3 bg-gray-900 rounded-lg border border-yellow-600">
-          <h4 className="text-yellow-400 font-bold mb-2">🔍 Estado del Sistema:</h4>
-          <div className="text-sm text-gray-300 space-y-1">
-            <div>Firebase conectado: <span className={connectionState?.firebaseInitialized ? 'text-green-400' : 'text-red-400'}>{connectionState?.firebaseInitialized ? '✅' : '❌'}</span></div>
-            <div>Proyectos cargados: <span className="text-green-400">{projects.length}</span></div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mb-6 flex flex-wrap gap-4">
+        </div>,
+        document.body
+      )}
+      <div className="max-w-6xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 border border-gray-700">
+                {/* Action Buttons */}
+        <div className="pm-toolbar">
           <button
             onClick={() => setShowForm(true)}
             disabled={isLoading}
-            className="bg-gray-700 text-gray-100 px-6 py-3 rounded-lg hover:bg-gray-600 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="pill-button pill-button--primary"
           >
             <Plus className="w-5 h-5" />
-            Nuevo Proyecto
+            Nuevo proyecto
           </button>
           <button
             onClick={() => setShowFilterModal(true)}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+            className="pill-button pill-button--surface"
           >
             <Filter className="w-5 h-5" />
-            Filtros y Orden
+            Filtros y orden
           </button>
           <button
             onClick={exportToExcel}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+            className="pill-button pill-button--accent-secondary"
           >
             <FileSpreadsheet className="w-5 h-5" />
             Exportar Excel
           </button>
           <button
             onClick={exportData}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
+            className="pill-button pill-button--surface"
           >
             <Download className="w-5 h-5" />
             Exportar JSON
           </button>
-          <label className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer">
-            <Upload className="w-5 h-5" />
-            Importar Datos
-            <input
-              type="file"
-              accept=".json"
-              onChange={importData}
-              className="hidden" />
-          </label>
-          <button
-            onClick={() => setShowFirebaseConfig(true)}
-            className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <Settings className="w-5 h-5" />
-            Config Firebase
-          </button>
-          <button
-            onClick={testWhatsAppNotification}
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <AlertCircle className="w-5 h-5" />
-            Probar WhatsApp
-          </button>
-        </div>
+                                      </div>
 
         {/* Filter Statistics */}
         {(filters.status !== 'all' || filters.cutoffDaysFilter !== 'all') && (
@@ -1194,303 +1505,6 @@ function ProjectManager() {
           </div>
         )}
 
-        {/* Project Form Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div className="bg-gray-800 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
-              <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-                <h2 className="text-2xl font-bold text-gray-100">
-                  {editingProject ? 'Editar Proyecto' : 'Nuevo Proyecto'}
-                </h2>
-                <button onClick={resetForm} className="text-gray-400 hover:text-gray-200 p-2">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Nombre del Proyecto *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ej: Chatbot de Ventas" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Cliente
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Nombre del cliente" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Estado
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {statusOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Precio Mensual ($)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.monthlyPrice}
-                    onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="299" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Fecha de Inicio
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                </div>
-
-                {formData.status === 'semana_gratis' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Días de Prueba
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.trialDays}
-                      onChange={(e) => setFormData({ ...formData, trialDays: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="7" />
-                  </div>
-                )}
-
-                {/* Sección de Fecha de Corte - NUEVA FUNCIONALIDAD */}
-                {formData.status === 'establecido' && (
-                  <div className="md:col-span-2 bg-orange-900/30 border border-orange-600 rounded-lg p-4">
-                    <div className="flex items-center mb-4">
-                      <Calendar className="w-5 h-5 text-orange-400 mr-2" />
-                      <label className="text-sm font-medium text-orange-300">
-                        Configuración de Fecha de Corte
-                      </label>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="cutoffDateType"
-                            checked={!formData.customCutoffDate}
-                            onChange={() => {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                customCutoffDate: false,
-                                cutoffDate: prev.startDate ? dataManager.calculateNextCutoffDate(prev.startDate) : ''
-                              }));
-                            }}
-                            className="mr-2"
-                          />
-                          <span className="text-orange-200">Fecha automática</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="cutoffDateType"
-                            checked={formData.customCutoffDate}
-                            onChange={() => setFormData(prev => ({ ...prev, customCutoffDate: true }))}
-                            className="mr-2"
-                          />
-                          <span className="text-orange-200">Fecha personalizada</span>
-                        </label>
-                      </div>
-
-                      {formData.startDate && !formData.customCutoffDate && (
-                        <div className="bg-gray-800 p-3 rounded-lg border border-gray-600">
-                          <div className="text-sm text-gray-300">
-                            <span className="font-medium">Fecha calculada automáticamente:</span>
-                            <span className="ml-2 text-green-400 font-mono">
-                              {formData.cutoffDate ? new Date(formData.cutoffDate + 'T00:00:00').toLocaleDateString('es-MX') : 'Selecciona fecha de inicio'}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            Se calculará automáticamente según la fecha de inicio
-                          </div>
-                        </div>
-                      )}
-
-                      {formData.customCutoffDate && (
-                        <div>
-                          <label className="block text-sm font-medium text-orange-300 mb-2">
-                            Fecha de Corte Personalizada
-                          </label>
-                          <input
-                            type="date"
-                            value={formData.cutoffDate}
-                            onChange={(e) => setFormData({ ...formData, cutoffDate: e.target.value })}
-                            className="w-full px-4 py-2 border border-orange-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          />
-                          <div className="text-xs text-orange-200 mt-1">
-                            Puedes establecer una fecha de corte específica diferente al cálculo automático
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sección de Costo de Instalación */}
-                <div className="md:col-span-2">
-                  <div className="flex items-center mb-2">
-                    <input
-                      type="checkbox"
-                      id="hasInstallationCost"
-                      checked={formData.hasInstallationCost}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        hasInstallationCost: e.target.checked,
-                        installationCost: e.target.checked ? formData.installationCost : '',
-                        installationDate: e.target.checked ? formData.installationDate : ''
-                      })}
-                      className="mr-2" />
-                    <label htmlFor="hasInstallationCost" className="text-sm font-medium text-gray-300">
-                      Incluir costo de instalación
-                    </label>
-                  </div>
-                  {formData.hasInstallationCost && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
-                          Costo de instalación
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.installationCost}
-                          onChange={(e) => setFormData({ ...formData, installationCost: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="150" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
-                          Fecha de instalación *
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.installationDate}
-                          onChange={(e) => setFormData({ ...formData, installationDate: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          required />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Sección de Facturación */}
-                <div className="md:col-span-2 border-t border-gray-600 pt-6">
-                  <div className="flex items-center mb-4">
-                    <input
-                      type="checkbox"
-                      id="requiresBilling"
-                      checked={formData.requiresBilling}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        requiresBilling: e.target.checked,
-                        rfc: e.target.checked ? formData.rfc : '',
-                        businessName: e.target.checked ? formData.businessName : ''
-                      })}
-                      className="mr-2" />
-                    <label htmlFor="requiresBilling" className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      Requiere facturación
-                    </label>
-                  </div>
-
-                  {formData.requiresBilling && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-900 p-4 rounded-lg border border-purple-600">
-                      <div>
-                        <label className="block text-sm font-medium text-purple-300 mb-2">
-                          RFC *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.rfc}
-                          onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })}
-                          className="w-full px-4 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          placeholder="ABC123456789"
-                          maxLength="13" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-purple-300 mb-2">
-                          Razón Social *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.businessName}
-                          onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                          className="w-full px-4 py-2 border border-purple-600 rounded-lg bg-gray-800 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                          placeholder="Empresa S.A. de C.V." />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="Descripción del proyecto..." />
-                </div>
-              </div>
-
-              <div className="flex gap-4 mt-6">
-                <button
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <Clock className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  {editingProject ? 'Actualizar' : 'Crear'} Proyecto
-                </button>
-                <button
-                  onClick={resetForm}
-                  className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Projects Grid */}
         {isLoading ? (
@@ -1500,7 +1514,7 @@ function ProjectManager() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {getFilteredAndSortedProjects().map((project) => {
+            {filteredProjects.map((project) => {
               const statusInfo = getStatusInfo(project.status);
               const daysUntilCutoff = getDaysDifference(project.cutoffDate);
               const daysUntilTrialEnd = getDaysUntilTrialEnd(project);
@@ -1518,12 +1532,21 @@ function ProjectManager() {
                       <button
                         onClick={() => handleEdit(project)}
                         className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Editar proyecto"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleMarkAsPaid(project)}
+                        className="p-2 text-green-400 hover:text-green-300 hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Marcar como pagado (actualiza fecha de corte)"
+                      >
+                        <BadgeCheck className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleDelete(project.id)}
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Eliminar proyecto"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1567,6 +1590,16 @@ function ProjectManager() {
                         {project.businessName && (
                           <div className="text-sm text-gray-300">
                             <span className="font-medium">Razón Social:</span> {project.businessName}
+                          </div>
+                        )}
+                        {project.facturaGenerada && project.folioFactura && (
+                          <div className="text-sm text-purple-200">
+                            <span className="font-medium">Folio Factura:</span> {project.folioFactura}
+                          </div>
+                        )}
+                        {project.facturaGenerada && project.fechaFactura && (
+                          <div className="text-xs text-purple-300">
+                            <span className="font-medium">Fecha Factura:</span> {project.fechaFactura}
                           </div>
                         )}
                       </div>
@@ -1627,7 +1660,7 @@ function ProjectManager() {
               );
             })}
 
-            {getFilteredAndSortedProjects().length === 0 && projects.length > 0 && (
+            {filteredProjects.length === 0 && projects.length > 0 && (
               <div className="col-span-full text-center py-12">
                 <div className="text-gray-500 text-lg mb-4">No hay proyectos que coincidan con los filtros</div>
                 <button
@@ -1656,8 +1689,8 @@ function ProjectManager() {
         )}
 
         {/* Custom Alert Modal */}
-        {showAlertModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showAlertModal && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="w-6 h-6 text-blue-400" />
@@ -1671,7 +1704,8 @@ function ProjectManager() {
                 Entendido
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Custom Confirm Modal */}
@@ -1706,3 +1740,4 @@ function ProjectManager() {
 }
 
 export default ProjectManager;
+

@@ -15,15 +15,59 @@
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
+    <!-- Polyfill para process - debe cargarse ANTES de cualquier script -->
+    <script>
+      // Mock para package.json de gaxios
+      window.pkg = {
+        name: 'gaxios',
+        version: '7.1.2'
+      };
+
+      // Configurar process global inmediatamente
+      window.process = {
+        env: { NODE_ENV: 'development' },
+        platform: 'browser',
+        version: '',
+        versions: {},
+        arch: '',
+        name: 'browser',
+        type: 'renderer',
+        pid: 1,
+        ppid: 1,
+        uptime: function() { return Date.now(); },
+        cwd: function() { return '/'; },
+        hrtime: function() { return [0, 0]; },
+        memoryUsage: function() { return { rss: 0, heapTotal: 0, heapUsed: 0, external: 0 }; },
+        nextTick: function(fn) { setTimeout(fn, 0); },
+        on: function() {},
+        emit: function() {},
+        stdin: null,
+        stdout: null,
+        stderr: null,
+        argv: [],
+        execPath: '',
+        execArgv: [],
+        exit: function() {},
+        kill: function() {},
+        title: 'browser',
+        features: {},
+        config: {},
+        release: {},
+        browser: true
+      };
+
+      // Configurar en global y globalThis
+      if (typeof global !== 'undefined') {
+        global.process = window.process;
+        global.pkg = window.pkg;
+      }
+      if (typeof globalThis !== 'undefined') {
+        globalThis.process = window.process;
+        globalThis.pkg = window.pkg;
+      }
+    </script>
+
     <title>VepiAutoMKT - Gestor de Proyectos</title>
   </head>
   <body>

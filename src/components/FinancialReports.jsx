@@ -38,7 +38,8 @@ import {
   formatCurrencyMXN,
   formatCompactNumberMXN,
   getAvailableYears,
-  CHART_COLORS
+  CHART_COLORS,
+  EXPENSE_CATEGORIES
 } from '../utils/chartUtils';
 
 // ✅ DataManager SOLO de dataSync
@@ -48,16 +49,6 @@ import {
   DATA_EVENTS,
   initializeData
 } from '../utils/dataSync';
-
-// ERROR 1.1: Solución - Agregar la constante EXPENSE_CATEGORIES al inicio del archivo
-const EXPENSE_CATEGORIES = {
-  hosting: { name: 'Hosting & Dominios', color: '#3B82F6', icon: '🌐', type: 'fixed' },
-  software: { name: 'Software & Licencias', color: '#8B5CF6', icon: '💻', type: 'fixed' },
-  marketing: { name: 'Marketing & Publicidad', color: '#10B981', icon: '📢', type: 'variable' },
-  operativos: { name: 'Gastos Operativos', color: '#F59E0B', icon: '🏢', type: 'variable' },
-  servicios: { name: 'Servicios Profesionales', color: '#EF4444', icon: '🤝', type: 'variable' },
-  otros: { name: 'Otros', color: '#6B7280', icon: '📦', type: 'variable' }
-};
 
 // Función local para calcular profit analysis sin llamadas recursivas
 const calculateNetProfitLocal = (projects, expenses, year) => {
@@ -739,19 +730,12 @@ const FinancialReports = () => {
             </div>
 
             <div className="mt-4 space-y-2">
-              {(expenseStats.categoryDistribution || []).map((item, index) => {
-                // ERROR 1.1: Solución - Usar los colores definidos en EXPENSE_CATEGORIES
-                // Ya que EXPENSE_CATEGORIES se define al inicio de este archivo, podemos usarlo directamente.
-                // Asegurarse de que `item.name` coincida con las claves de `EXPENSE_CATEGORIES` (en minúsculas y sin espacios/símbolos)
-                const categoryKey = Object.keys(EXPENSE_CATEGORIES).find(key => EXPENSE_CATEGORIES[key].name === item.name);
-                const color = categoryKey ? EXPENSE_CATEGORIES[categoryKey].color : '#6B7280';
-
-                return (
+              {(expenseStats.categoryDistribution || []).map((item, index) => (
                   <div key={index} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: color }}
+                        style={{ backgroundColor: item.color || '#6B7280' }}
                       />
                       <span className="text-gray-300">{item.name}</span>
                     </div>
@@ -759,8 +743,7 @@ const FinancialReports = () => {
                       {formatCurrencyMXN(item.value)} ({item.percentage}%)
                     </div>
                   </div>
-                );
-              })}
+                ))}
             </div>
           </div>
 

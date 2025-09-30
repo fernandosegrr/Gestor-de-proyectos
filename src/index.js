@@ -1,3 +1,5 @@
+// Importar polyfills ANTES de cualquier otra cosa
+import './process-polyfill';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
