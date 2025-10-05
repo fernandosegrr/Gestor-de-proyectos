@@ -248,9 +248,8 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ## 👨‍💻 Autor
 
-**Fernando Segura**
+**Fernando Guerrero**
 - GitHub: [@fernandosegrr](https://github.com/fernandosegrr)
-- LinkedIn: [Tu LinkedIn]
 
 ## 🙏 Agradecimientos
 
