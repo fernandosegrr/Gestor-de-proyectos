@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DollarSign,
   Plus,
@@ -119,8 +120,8 @@ const calculateExpenseStats = (expenses = []) => {
 const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -148,7 +149,8 @@ const ConfirmDialog = ({ isOpen, title, message, onConfirm, onCancel }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -826,8 +828,8 @@ const ExpenseManager = () => {
       </div>
 
       {/* Formulario para agregar/editar gasto (Modal) */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+      {showForm && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
           <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b border-gray-700 flex-shrink-0">
               <h3 className="text-2xl font-bold text-gray-100">
@@ -1029,7 +1031,8 @@ const ExpenseManager = () => {
             </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Diálogo de confirmación para eliminar */}

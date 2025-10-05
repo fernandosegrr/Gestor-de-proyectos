@@ -115,7 +115,14 @@ function ProjectManager() {
   // Escuchar cambios en los proyectos desde el sistema centralizado
   useDataSync(DATA_EVENTS.PROJECTS_UPDATED, (updatedProjects) => {
     if (updatedProjects) {
-      setProjects(updatedProjects);
+      // ✅ FIX: Evitar duplicados comparando con el estado actual
+      setProjects(prevProjects => {
+        // Si es exactamente el mismo array, no actualizar
+        if (JSON.stringify(prevProjects) === JSON.stringify(updatedProjects)) {
+          return prevProjects;
+        }
+        return updatedProjects;
+      });
       // Verificar fechas de corte cuando se actualizan los proyectos
   // notificationService.checkCutoffDatesAndNotify(updatedProjects); // Eliminado
     }
@@ -1215,8 +1222,8 @@ function ProjectManager() {
         )}
 
         {/* Firebase Configuration Modal */}
-        {showFirebaseConfig && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showFirebaseConfig && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
               <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                 <h2 className="text-2xl font-bold text-gray-100">Configuración de Firebase</h2>
@@ -1305,12 +1312,13 @@ function ProjectManager() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Filter Modal */}
-        {showFilterModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showFilterModal && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
               <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                 <h2 className="text-2xl font-bold text-gray-100 flex items-center gap-2">
@@ -1502,7 +1510,8 @@ function ProjectManager() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
 
@@ -1709,8 +1718,8 @@ function ProjectManager() {
         )}
 
         {/* Custom Confirm Modal */}
-        {showConfirmModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showConfirmModal && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="w-6 h-6 text-yellow-400" />
@@ -1732,7 +1741,8 @@ function ProjectManager() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

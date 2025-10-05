@@ -570,18 +570,20 @@ export const dataManager = {
         if (connectionState.firebaseInitialized && connectionState.userId) {
           const projectRef = doc(db, getCollectionPath('projects'), newProject.id);
           await setDoc(projectRef, newProject);
+          // ✅ FIX: No disparar evento manual cuando Firebase está activo, 
+          // el onSnapshot ya se encargará de actualizar
+        } else {
+          // Solo actualizar manualmente si Firebase no está disponible
+          const currentProjects = getFromGlobalCache('projects');
+          const updatedProjects = [...currentProjects, newProject];
+          updateGlobalCache('projects', updatedProjects);
+          inMemoryStorage.setItem('chatbot-projects', updatedProjects);
+          
+          // Disparar evento de actualización con debouncing
+          debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
         }
 
-        // âœ… Actualizar cache local y global
-        const currentProjects = getFromGlobalCache('projects');
-        const updatedProjects = [...currentProjects, newProject];
-        updateGlobalCache('projects', updatedProjects);
-        inMemoryStorage.setItem('chatbot-projects', updatedProjects);
-        
-        // Disparar evento de actualizaciÃ³n con debouncing
-        debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
-
-        console.log('âœ… Proyecto creado:', newProject.id);
+        console.log('✅ Proyecto creado:', newProject.id);
         return { success: true, project: newProject };
       } catch (error) {
         console.error('âŒ Error creating project:', error);
@@ -606,20 +608,21 @@ export const dataManager = {
         if (connectionState.firebaseInitialized && connectionState.userId) {
           const projectRef = doc(db, getCollectionPath('projects'), projectId);
           await updateDoc(projectRef, updatedData);
+          // ✅ FIX: No disparar evento manual cuando Firebase está activo
+        } else {
+          // Solo actualizar manualmente si Firebase no está disponible
+          const currentProjects = getFromGlobalCache('projects');
+          const updatedProjects = currentProjects.map(project => 
+            project.id === projectId ? { ...project, ...updatedData } : project
+          );
+          updateGlobalCache('projects', updatedProjects);
+          inMemoryStorage.setItem('chatbot-projects', updatedProjects);
+          
+          // Disparar evento de actualización con debouncing
+          debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
         }
 
-        // âœ… Actualizar cache local y global
-        const currentProjects = getFromGlobalCache('projects');
-        const updatedProjects = currentProjects.map(project => 
-          project.id === projectId ? { ...project, ...updatedData } : project
-        );
-        updateGlobalCache('projects', updatedProjects);
-        inMemoryStorage.setItem('chatbot-projects', updatedProjects);
-        
-        // Disparar evento de actualizaciÃ³n con debouncing
-        debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
-
-        console.log('âœ… Proyecto actualizado:', projectId);
+        console.log('✅ Proyecto actualizado:', projectId);
         return { success: true };
       } catch (error) {
         console.error('âŒ Error updating project:', error);
@@ -638,18 +641,19 @@ export const dataManager = {
         if (connectionState.firebaseInitialized && connectionState.userId) {
           const projectRef = doc(db, getCollectionPath('projects'), projectId);
           await deleteDoc(projectRef);
+          // ✅ FIX: No disparar evento manual cuando Firebase está activo
+        } else {
+          // Solo actualizar manualmente si Firebase no está disponible
+          const currentProjects = getFromGlobalCache('projects');
+          const updatedProjects = currentProjects.filter(project => project.id !== projectId);
+          updateGlobalCache('projects', updatedProjects);
+          inMemoryStorage.setItem('chatbot-projects', updatedProjects);
+          
+          // Disparar evento de actualización con debouncing
+          debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
         }
 
-        // âœ… Actualizar cache local y global
-        const currentProjects = getFromGlobalCache('projects');
-        const updatedProjects = currentProjects.filter(project => project.id !== projectId);
-        updateGlobalCache('projects', updatedProjects);
-        inMemoryStorage.setItem('chatbot-projects', updatedProjects);
-        
-        // Disparar evento de actualizaciÃ³n con debouncing
-        debouncedTriggerDataUpdate(DATA_EVENTS.PROJECTS_UPDATED, updatedProjects);
-
-        console.log('âœ… Proyecto eliminado:', projectId);
+        console.log('✅ Proyecto eliminado:', projectId);
         return { success: true };
       } catch (error) {
         console.error('âŒ Error deleting project:', error);

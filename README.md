@@ -2,10 +2,28 @@
 
 Un sistema completo de gestión para proyectos de chatbots, diseñado para agencias y freelancers que necesitan organizar, facturar y analizar sus proyectos de manera eficiente.
 
+![Version](https://img.shields.io/badge/Version-1.0.1-green.svg)
 ![React](https://img.shields.io/badge/React-18.2.0-blue.svg)
 ![Firebase](https://img.shields.io/badge/Firebase-10.14.1-orange.svg)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4.4-38B2AC.svg)
 ![Recharts](https://img.shields.io/badge/Recharts-2.12.0-8884d8.svg)
+![Status](https://img.shields.io/badge/Status-Stable-success.svg)
+
+## 🆕 Últimas Actualizaciones (v1.0.1 - Oct 2025)
+
+### 🐛 Correcciones Críticas
+- ✅ **Corregida duplicación de proyectos** - Los proyectos ya no aparecen dos veces al crearlos
+- ✅ **Posición de scroll preservada** - Los modales ya no mueven la página al abrirse
+- ✅ **Sincronización optimizada** - Sistema de Firebase más eficiente sin actualizaciones redundantes
+
+### 🎨 Mejoras de UX
+- ✅ **11 modales convertidos a React Portals** - Mejor experiencia de usuario en todos los componentes
+- ✅ **Z-index consistente** - Gestión mejorada de capas de UI
+- ✅ **Rendimiento optimizado** - Menos llamadas a la base de datos
+
+Ver [CHANGELOG.md](CHANGELOG.md) para detalles completos o [CAMBIOS_REALIZADOS.md](CAMBIOS_REALIZADOS.md) para documentación técnica detallada.
+
+---
 
 ## 📋 Características Principales
 
@@ -160,8 +178,9 @@ src/
 - **DataManager**: CRUD operations para proyectos, clientes y gastos
 - **FirebaseManager**: Conexión y autenticación con Firebase
 - **Cache System**: Memoria + localStorage + Firebase
-- **Real-time Sync**: Suscripciones a cambios en Firestore
+- **Real-time Sync**: Suscripciones a cambios en Firestore (single source of truth) ✨
 - **Offline Support**: Funcionamiento sin conexión
+- **Optimized Updates**: Sistema de eventos con debouncing para prevenir duplicaciones ⚡
 
 ### Eventos del Sistema
 ```javascript

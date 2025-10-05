@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   Search,
@@ -810,8 +811,8 @@ const ClientDatabase = () => {
         </div>
 
         {/* Modal de formulario */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showForm && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
               <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                 <h2 className="text-2xl font-bold text-gray-100">
@@ -941,12 +942,13 @@ const ClientDatabase = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Modal de detalle del cliente */}
-        {showDetail && selectedClient && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showDetail && selectedClient && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-700">
               <div className="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                 <h2 className="text-2xl font-bold text-gray-100">
@@ -1110,12 +1112,13 @@ const ClientDatabase = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Modal de alerta */}
-        {showAlert && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showAlert && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="w-6 h-6 text-blue-400" />
@@ -1134,12 +1137,13 @@ const ClientDatabase = () => {
                 Entendido
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Modal de confirmación */}
-        {showConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        {showConfirm && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full shadow-2xl border border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <AlertCircle className="w-6 h-6 text-yellow-400" />
@@ -1170,7 +1174,8 @@ const ClientDatabase = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>

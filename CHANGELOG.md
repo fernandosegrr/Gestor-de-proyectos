@@ -12,10 +12,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment configuration example (.env.example)
 - Technical architecture documentation
 - Setup and deployment guides
+- CAMBIOS_REALIZADOS.md - Detailed documentation of latest fixes
 
 ### Changed
 - Improved project structure documentation
 - Enhanced README with comprehensive feature overview
+
+## [1.0.1] - 2025-10-05
+
+### Fixed
+- **Project duplication bug**: Projects no longer appear twice when created
+  - Removed manual event triggers when Firebase is active
+  - Optimized `dataSync.js` to delegate all updates to `onSnapshot` listener
+  - Added state comparison in `ProjectManager.jsx` to prevent duplicate updates
+- **Modal scroll position issue**: All modals now preserve user's scroll position
+  - Converted 11 modals to React Portals with fixed positioning
+  - Affected components: `ProjectManager.jsx` (5 modals), `ClientDatabase.jsx` (4 modals), `ExpenseManager.jsx` (2 modals)
+  - Applied consistent z-index (1000) across all modals
+  - Enhanced UX with absolute positioning (top: 0, left: 0, right: 0, bottom: 0)
+
+### Changed
+- Optimized Firebase synchronization system
+  - CRUD operations now rely solely on real-time listeners
+  - Reduced redundant database calls
+  - Improved performance with debouncing (50ms delay)
+- Enhanced modal architecture
+  - All modals now use React Portals rendered to `document.body`
+  - Consistent styling and positioning across components
+  - Better separation of concerns in modal rendering
+
+### Technical
+- Modified `src/utils/dataSync.js`:
+  - `createProject()`, `updateProject()`, `deleteProject()` no longer trigger manual events when Firebase is connected
+  - Event triggering delegated to `onSnapshot` listeners
+- Modified `src/components/ProjectManager.jsx`:
+  - Added import for `createPortal` from 'react-dom'
+  - Enhanced `useDataSync` hook with state comparison
+  - Converted 5 modals to portals
+- Modified `src/components/ClientDatabase.jsx`:
+  - Added import for `createPortal` from 'react-dom'
+  - Converted 4 modals to portals
+- Modified `src/components/ExpenseManager.jsx`:
+  - Added import for `createPortal` from 'react-dom'
+  - Converted 2 modals (including ConfirmDialog) to portals
+
+### Documentation
+- Added comprehensive changelog entry for version 1.0.1
+- Created CAMBIOS_REALIZADOS.md with detailed fix documentation
+- Updated technical documentation with modal architecture changes
 
 ## [1.0.0] - 2025-09-27
 

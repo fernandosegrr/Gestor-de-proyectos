@@ -77,9 +77,14 @@ const firebaseManager = {
 
 const cacheStrategy = {
   read: 'memory → localStorage → firebase',
-  write: 'memory + localStorage + firebase',
-  sync: 'real-time subscriptions'
+  write: 'firebase (onSnapshot updates cache automatically)',
+  sync: 'real-time subscriptions (single source of truth)'
 }
+
+// ✅ OPTIMIZACIÓN v1.0.1:
+// - CRUD operations no longer trigger manual cache updates
+// - All updates delegated to onSnapshot listeners
+// - Eliminates duplicate updates and race conditions
 ```
 
 ### Eventos del Sistema
@@ -190,6 +195,62 @@ const notificationService = {
 - **Queue system** para reintentos automáticos
 - **Logging** de envíos exitosos/fallidos
 
+## 🎨 Arquitectura de UI
+
+### Sistema de Modales (v1.0.1)
+
+#### Implementación con React Portals
+```javascript
+import { createPortal } from 'react-dom';
+
+// Template de modal optimizado
+const Modal = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+  
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[1000]"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      onClick={onClose}
+    >
+      <div 
+        className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+};
+```
+
+#### Modales en el Sistema
+
+**ProjectManager.jsx** (5 modales):
+1. Modal de formulario (crear/editar proyecto)
+2. Modal de configuración Firebase
+3. Modal de filtros y ordenamiento
+4. Modal de alerta
+5. Modal de confirmación
+
+**ClientDatabase.jsx** (4 modales):
+1. Modal de formulario (crear/editar cliente)
+2. Modal de detalle del cliente
+3. Modal de alerta
+4. Modal de confirmación
+
+**ExpenseManager.jsx** (2 modales):
+1. Modal de formulario (crear/editar gasto)
+2. ConfirmDialog (confirmación de eliminación)
+
+#### Ventajas de React Portals
+- ✅ **Scroll preservado**: No afecta el scroll del contenedor padre
+- ✅ **Z-index consistente**: Todos los modales usan z-[1000]
+- ✅ **Separación DOM**: Renderizados fuera del árbol de componentes
+- ✅ **Mejor accesibilidad**: Gestión de foco más simple
+- ✅ **Performance**: No causa reflows en el contenedor padre
+
 ## 🔧 Gestión de Estado
 
 ### Estado Global
@@ -232,6 +293,7 @@ globalDataCache = {
 const debouncedTriggerDataUpdate = (eventType, data, delay = 50) => {
   // Evita actualizaciones excesivas de UI
   // Agrupa múltiples cambios en uno solo
+  // Previene renders innecesarios
 }
 ```
 
@@ -251,6 +313,53 @@ const isCacheValid = (dataType, maxAgeMinutes = 5) => {
   // Evita requests innecesarios a Firebase
   // Fallback automático a datos locales
 }
+```
+
+### React Portals para Modales (v1.0.1)
+```javascript
+// ANTES: Modales en flujo DOM normal
+{showModal && (
+  <div className="fixed inset-0 ...">
+    {/* Causa scroll issues */}
+  </div>
+)}
+
+// DESPUÉS: Modales renderizados fuera del flujo DOM
+{showModal && createPortal(
+  <div className="fixed inset-0 ... z-[1000]" 
+       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+    {/* Preserva scroll position */}
+  </div>,
+  document.body
+)}
+
+// Beneficios:
+// ✅ Scroll position preserved
+// ✅ Better z-index management
+// ✅ Cleaner component tree
+// ✅ No layout interference
+```
+
+### Sincronización Optimizada (v1.0.1)
+```javascript
+// ANTES: Doble actualización
+createProject() {
+  await saveToFirebase();
+  updateLocalCache();     // ❌ Manual
+  triggerEvent();         // ❌ Manual
+}
+
+// DESPUÉS: Single source of truth
+createProject() {
+  await saveToFirebase();
+  // ✅ onSnapshot listener updates cache automatically
+  // ✅ Single event triggered by Firebase
+}
+
+// Resultado:
+// - Sin duplicaciones de datos
+// - Menos operaciones de red
+// - UI más responsive
 ```
 
 ## 🔒 Seguridad y Validación
@@ -342,4 +451,8 @@ Para preguntas técnicas o soporte:
 
 ---
 
-*Última actualización: Septiembre 2025*
+**📌 Historial de Versiones Documentadas:**
+- v1.0.0 (Septiembre 2025) - Lanzamiento inicial
+- v1.0.1 (Octubre 2025) - Corrección de bugs críticos y optimizaciones
+
+*Última actualización: 5 de octubre de 2025*
