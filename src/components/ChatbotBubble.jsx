@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Send, X } from 'lucide-react';
+import { Send, X, Bot } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import BotIcon from './BotIcon';
 
 const WEBHOOK_URL = 'https://n8n-n8n.d6cr6o.easypanel.host/webhook/b2469a03-31d4-4db9-b823-75f8bcb3d739';
 const LOCAL_STORAGE_KEY = 'chatbot-bubble-history';
@@ -136,11 +135,11 @@ export default function ChatbotBubble() {
         prev.map((msg) =>
           msg.id === placeholderId
             ? {
-                ...msg,
-                text: reply,
-                pending: false,
-                date: new Date().toISOString(),
-              }
+              ...msg,
+              text: reply,
+              pending: false,
+              date: new Date().toISOString(),
+            }
             : msg,
         ),
       );
@@ -150,12 +149,12 @@ export default function ChatbotBubble() {
         prev.map((msg) =>
           msg.id === placeholderId
             ? {
-                ...msg,
-                text: 'No se pudo obtener la respuesta del asistente.',
-                from: 'bot',
-                pending: false,
-                date: new Date().toISOString(),
-              }
+              ...msg,
+              text: 'No se pudo obtener la respuesta del asistente.',
+              from: 'bot',
+              pending: false,
+              date: new Date().toISOString(),
+            }
             : msg,
         ),
       );
@@ -179,7 +178,7 @@ export default function ChatbotBubble() {
           aria-label="Abrir asistente virtual"
         >
           <div className="chatbot-bubble-circle">
-            <BotIcon size={38} />
+            <Bot size={38} />
           </div>
           <span className="chatbot-bubble-tooltip">Habla con el asistente</span>
         </button>

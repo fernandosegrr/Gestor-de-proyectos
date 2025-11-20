@@ -7,7 +7,7 @@ import {
   Menu,
   X,
   DollarSign,
-  MessageSquare,
+
 } from 'lucide-react';
 
 const Navigation = () => {
@@ -20,11 +20,7 @@ const Navigation = () => {
       name: 'Proyectos',
       icon: FolderOpen,
     },
-    {
-      path: '/conversations',
-      name: 'Conversaciones',
-      icon: MessageSquare,
-    },
+
     {
       path: '/reports',
       name: 'Reportes',
